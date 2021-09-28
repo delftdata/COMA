@@ -710,25 +710,25 @@ public abstract class MatchResult {
 		}
 		
 		public String toString() {
-			String info=name;
-			info+=" ["+srcObjects.size()+","+trgObjects.size()+"] ";
-			if (sourceGraph!=null)
-				info+=sourceGraph.getSource().getName();
-			if (targetGraph!=null)
-				info+=targetGraph.getSource().getName();
-			
-			
+//			String info=name;
+//			info+=" ["+srcObjects.size()+","+trgObjects.size()+"] ";
+//			if (sourceGraph!=null)
+//				info+=sourceGraph.getSource().getName();
+//			if (targetGraph!=null)
+//				info+=targetGraph.getSource().getName();
+//
+			String info="";
 			StringBuffer sb = new StringBuffer();
-			sb.append("--------------------------------------------------------\n");
+//			sb.append("--------------------------------------------------------\n");
 		    int matchCnt = 0;
 		    for (int i=0; i<srcObjects.size(); i++) {
 		      Object srcObject = srcObjects.get(i);
 		      for (int j=0; j<trgObjects.size(); j++) {
 		        Object trgObject = trgObjects.get(j);
-		        float sim = getSimilarity(srcObject, trgObject);			        
+		        float sim = getSimilarity(srcObject, trgObject);
 		        if (sim>0) {
 		          matchCnt ++;
-		          sb.append(" - ");
+//		          sb.append(" - ");
 		          if (srcObject instanceof Path && trgObject instanceof Path)
 		            sb.append(((Path)srcObject).toNameString()).append(" <-> ").append(((Path)trgObject).toNameString());
 		          else if (srcObject instanceof Element && trgObject instanceof Element)
@@ -739,8 +739,8 @@ public abstract class MatchResult {
 		        }
 		      }
 		    }
-		    sb.append(" + Total: ").append(matchCnt).append(" correspondences\n");
-		    sb.append("--------------------------------------------------------\n");
+//		    sb.append(" + Total: ").append(matchCnt).append(" correspondences\n");
+//		    sb.append("--------------------------------------------------------\n");
 		    info+= sb.toString();
 			
 			

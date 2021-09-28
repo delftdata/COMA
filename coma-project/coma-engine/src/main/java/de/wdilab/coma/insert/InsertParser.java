@@ -98,6 +98,11 @@ public abstract class InsertParser {
 		this.type= type;
 		if (dbInsert){
 			dataImport = new DataImport();
+
+			//ADDED BY CK
+
+			prep = new GraphPreprocessing(null, new ExecWorkflow());
+
 		} else {
 			prep = new GraphPreprocessing(null, new ExecWorkflow());
 		}
@@ -231,6 +236,14 @@ public abstract class InsertParser {
 				// insert source_rel, set status import_started
 				sourcerel_id = dataImport.insertSourceRel(source_id, source_id, SourceRelationship.REL_IS_A, null, null, null, Graph.PREP_LOADED, date);
 				dataImport.updateSourceRel(sourcerel_id, Repository.STATUS_IMPORT_STARTED);
+
+				// added by CK
+
+				graph = new Graph();
+				idsUsed = new HashSet<Integer>();
+				int id = (int) System.currentTimeMillis();
+				Source source = new Source(source_id, sourceName, Source.typeToString(type), null, provider, date);
+				graph.setSource(source);
 			} else {
 				graph = new Graph();
 				idsUsed = new HashSet<Integer>();
@@ -275,6 +288,16 @@ public abstract class InsertParser {
 	    if (dbInsert){
 	    	dataImport.updateSource(source_id, Repository.STATUS_IMPORT_DONE);
 	    	dataImport.updateSourceRel(sourcerel_id, Repository.STATUS_IMPORT_DONE);
+
+	    	// ADDED BY CK
+
+			if (this instanceof ListParser){
+				graph=null;
+			} else {
+				// check cycles and preprocess
+				graph.checkGraphCycles();
+				prep.preprocessGraph(graph);
+			}
 	    } else {
 	    	if (this instanceof ListParser){
 	    		graph=null;
@@ -304,7 +327,14 @@ public abstract class InsertParser {
 	
 	public int insertObject(int sourceId, String accession, String name, int kind) {
 		if (dbInsert){
-			return dataImport.insertObject(sourceId, accession, name, null, null, kind, null, null);
+			//ADDED BY CK
+			int id = dataImport.insertObject(sourceId, accession, name, null, null, kind, null, null);
+			while (idsUsed.contains(id)) id++;
+			Element element = new Element(id, sourceId, name, accession, null, null, kind, null, null);
+			graph.addVertex(element);
+			idsUsed.add(id);
+			//END
+			return id;
 		}
 		int id = idsUsed.size()+1;
 		while (idsUsed.contains(id)) id++;
@@ -358,7 +388,21 @@ public abstract class InsertParser {
 	
 	public void insertLink(int sourceRelId, int object1Id, int object2Id, String type) {
 		if (dbInsert){
+			//ADDED BY CK
+			Element element1 = graph.getElementWithId(object1Id);
+			if (element1==null){
+				System.out.println("InsertParser.insertLink Error element with that id not found " + object1Id);
+				return;
+			}
+			Element element2 = graph.getElementWithId(object2Id);
+			if (element2==null){
+				System.out.println("InsertParser.insertLink Error element with that id not found " + object2Id);
+				return;
+			}
+			graph.addEdge(element1, element2);
+			//ADDED BY CK
 			dataImport.insertObjectRel(sourceRelId, object1Id, object2Id, -1, type) ;
+
 		} else {
 			Element element1 = graph.getElementWithId(object1Id);
 			if (element1==null){

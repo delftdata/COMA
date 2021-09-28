@@ -332,6 +332,7 @@ public class ExecWorkflow {
 				fakeSim[i][j]=1;
 			}
 		}
+
 		MatchResult result = new MatchResultArray(srcObjects, trgObjects, fakeSim);
 		
 		return result;

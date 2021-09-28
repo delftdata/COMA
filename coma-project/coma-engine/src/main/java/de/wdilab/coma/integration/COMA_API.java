@@ -17,6 +17,10 @@
 
 package de.wdilab.coma.integration;
 
+import de.wdilab.coma.insert.instance.InstanceCSVParser;
+import de.wdilab.coma.repository.DataAccess;
+import de.wdilab.coma.repository.DataImport;
+import de.wdilab.coma.structure.*;
 import org.semanticweb.owl.align.AlignmentException;
 
 import de.wdilab.coma.center.Manager;
@@ -24,15 +28,16 @@ import de.wdilab.coma.insert.InsertParser;
 import de.wdilab.coma.insert.metadata.*;
 import de.wdilab.coma.matching.*;
 import de.wdilab.coma.matching.execution.ExecWorkflow;
-import de.wdilab.coma.structure.EvaluationMeasure;
-import de.wdilab.coma.structure.Graph;
-import de.wdilab.coma.structure.MatchResult;
-import de.wdilab.coma.structure.Source;
 import fr.inrialpes.exmo.align.impl.eval.PRecEvaluator;
 import fr.inrialpes.exmo.align.parser.AlignmentParser;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * This class provides a small API for the usage of the
@@ -127,11 +132,13 @@ public class COMA_API {
 	 * @return match result
 	 * function: given two uri, load and match schemas/ontologies (default/automatic configuration), return match result
 	 */
-	public MatchResult matchModelsDefault(String fileSrc, String fileTrg){
+	public MatchResult matchModelsDefault(String fileSrc, String fileTrg, String fileName) throws IOException {
 		Graph graphSrc = loadGraph(fileSrc, null);
 		Graph graphTrg = loadGraph(fileTrg, null);
+
+
 		ExecWorkflow exec = new ExecWorkflow();
-		Strategy strategy = new Strategy(Strategy.COMA_OPT);
+		Strategy strategy = new Strategy(System.getProperty("strategy"), Integer.parseInt(System.getProperty("maxN")));
 		if (graphSrc.getSource().getType()== Source.TYPE_ONTOLOGY
 				|| graphTrg.getSource().getType()== Source.TYPE_ONTOLOGY){
 			strategy.setResolution( new Resolution(Resolution.RES1_NODES));
@@ -152,6 +159,14 @@ public class COMA_API {
 		if (results.length>1){
 			System.err.println("COMA_API.matchModelsDefault results unexpected more than one, only first one returned");
 		}
+
+
+		BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+		writer.write(results[0].toString());
+
+		writer.close();
+
+		System.out.println(results[0].toString());
 		return results[0];
 	}
 	
@@ -180,7 +195,7 @@ public class COMA_API {
 		
 		// init ExecWorkflow with abbreviatons and synonyms
 		ExecWorkflow exec = new ExecWorkflow(abbrevList, fullFormList, wordList, synonymList);
-		Strategy strategy = new Strategy(Strategy.COMA_OPT);
+		Strategy strategy = new Strategy(System.getProperty("strategy"), Integer.valueOf(System.getProperty("maxN")));
 		if (graphSrc.getSource().getType()== Source.TYPE_ONTOLOGY
 				|| graphTrg.getSource().getType()== Source.TYPE_ONTOLOGY){
 			strategy.setResolution( new Resolution(Resolution.RES1_NODES));
@@ -216,7 +231,7 @@ public class COMA_API {
 			System.out.println("COMA_API.loadGraph Error file is null");
 			return null;
 		}
-		boolean insertDB = false;
+		boolean insertDB = true;
 		String filetype = file.toLowerCase();
 		filetype = filetype.substring(filetype.lastIndexOf("."));
 		InsertParser par = null;
@@ -231,7 +246,11 @@ public class COMA_API {
 		} else if (filetype.equals(InsertParser.OWL) || filetype.equals(InsertParser.RDF)){
 			par = new OWLParser_V3(insertDB);
 		}
-		
+
+		InstanceCSVParser inpar = new InstanceCSVParser(par.getDataImport());
+
+
+
 		if (par==null){
 			System.out.println("COMA_API.loadGraph Error filetype not recognized");
 			return null;
@@ -239,6 +258,30 @@ public class COMA_API {
 		
 		par.parseSingleSource(file);
 		Graph graph = par.getGraph();
+
+		DataAccess dbreader = new DataAccess(par.getDataImport().getConnection());
+
+		if (!dbreader.existInstancesTable(graph.getSource().getId())) {
+			par.getDataImport().createInstancesTable(graph.getSource().getId());
+		}
+		else{
+			par.getDataImport().deleteInstances(graph.getSource().getId());
+			par.getDataImport().createInstancesTable(graph.getSource().getId());
+		}
+
+
+		graph = inpar.parseInstances(graph.getGraph(Graph.PREP_RESOLVED));
+
+
+		//graph = manager.getAccessor().loadAndPropagateInstances(manager.getAccessor().loadInstances(graph.getSource(), graph.getElementSet()), graph);
+		//graph = inpar.parseInstances(graph);
+
+
+		graph = dbreader.loadAndPropagateInstances(true, graph);
+
+		//ArrayList<Element> listel = new ArrayList<Element>();
+		//listel.addAll(graph.getElementSet());
+		//inpar.parseInstancesForFile(file, null, listel);
 		return graph;
 	}
 	

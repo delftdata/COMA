@@ -46,7 +46,7 @@ public class InstanceCSVParser {
   public Graph parseInstances(Graph schemaGraph){
 	  String file = schemaGraph.getSource().getProvider();
 	  int id = schemaGraph.getSource().getId();
-//	  importer.createInstancesTable(id);
+	  //importer.createInstancesTable(id);
 	  importer.prepareInstancesStatement(id);
 	  ArrayList<Element> inners = schemaGraph.getInners();
 	  for (int i = 0; i < inners.size(); i++) {
@@ -64,7 +64,7 @@ public class InstanceCSVParser {
 	  return schemaGraph;
   }
   
-  private void parseInstancesForFile(String fileName, Element root, ArrayList<Element> elements){
+  public void parseInstancesForFile(String fileName, Element root, ArrayList<Element> elements){
 //	  int connect = 1; // counts the current instance data set
 	  
 //	  String fileName = root.getProvider();
